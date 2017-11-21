@@ -1,2 +1,2 @@
 # gosh
-Easily handle multiple HTTP sessions.
+Go session handling and key-value storage.
