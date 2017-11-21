@@ -134,6 +134,37 @@ func (r *Room) Get(iden, key string) (string, error) {
 	return r.sessions[iden][key], nil
 }
 
+// GetBatch is for getting multiple session values. The session is identified
+// by the iden parameter. The key parameters are used to find their key-value
+// pairs, with the values being returned in a string slice.
+//
+// GetBatch returns an error if the session doesn't exist or one of the values
+// don't exist for the specified key.
+func (r *Room) GetBatch(iden string, keys ...string) ([]string, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if err := r.accessCheck(iden, ""); err != nil {
+		return nil, err
+	}
+
+	r.watchers[iden] <- struct{}{}
+
+	var (
+		values = make([]string, len(keys), len(keys))
+		ok     bool
+	)
+
+	for i, k := range keys {
+		if _, ok = r.sessions[iden][k]; !ok {
+			return nil, ErrKeyDoesntExist
+		}
+		values[i] = r.sessions[iden][k]
+	}
+
+	return values, nil
+}
+
 // Set is for setting session key-value pairs. The session is identified by the
 // iden parameter. The key-value pair is specified by the key and value
 // parameters.
@@ -147,8 +178,8 @@ func (r *Room) Set(iden, key, value string) error {
 		return err
 	}
 
-	r.sessions[iden][key] = value
 	r.watchers[iden] <- struct{}{}
+	r.sessions[iden][key] = value
 
 	return nil
 }
